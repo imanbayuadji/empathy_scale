@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Empathy Insight</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- html2canvas for Image Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .hide { display: none !important; }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Custom Radio Button Styling */
+        .likert-radio {
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border: 2px solid #cbd5e1;
+            border-radius: 50%;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            position: relative;
+        }
+        .likert-radio:checked {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+        .likert-radio:checked::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 12px;
+            height: 12px;
+            background-color: #3b82f6;
+            border-radius: 50%;
+        }
+        .likert-label {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .likert-container:hover .likert-radio:not(:checked) { border-color: #94a3b8; }
+        
+        /* PDF/Print specific styles */
+        .page-break { page-break-before: always !important; break-before: page !important; }
+        .avoid-break { page-break-inside: avoid !important; break-inside: avoid !important; }
+        
+        /* Footer style */
+        .dev-footer {
+            text-align: center;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 2rem;
+            padding-bottom: 1rem;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Navbar -->
+    <nav class="bg-white shadow-sm py-4 px-6 md:px-12 flex justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center gap-2">
+            <i class="fa-solid fa-brain text-blue-600 text-2xl"></i>
+            <span class="font-bold text-xl tracking-tight text-slate-800">Empathy<span class="text-blue-600"> - Interpersonal Reactivity Index (IRI)</span></span>
+        </div>
+        <div id="nav-user" class="hide text-sm font-medium text-slate-500">
+            <i class="fa-regular fa-user mr-1"></i> <span id="nav-username">User</span>
+            <span id="nav-role" class="ml-2 px-2 py-0.5 rounded text-xs font-bold"></span>
+            <button onclick="logout()" class="ml-3 text-red-500 hover:text-red-700 underline text-xs">Logout</button>
+        </div>
+    </nav>
+
+    <!-- Admin Navigation (Only visible for admin) -->
+    <div id="admin-nav" class="hide bg-slate-800 text-white py-2 px-6 flex flex-wrap gap-4 justify-center text-sm font-medium">
+        <button onclick="switchSection('sec-landing')" class="hover:text-blue-300">Info IRI</button>
+        <button onclick="switchSection('sec-form')" class="hover:text-blue-300">Form Responden</button>
+        <button onclick="switchSection('sec-assessment')" class="hover:text-blue-300">Assessment</button>
+        <button onclick="switchSection('sec-result')" class="hover:text-blue-300">Dashboard Hasil</button>
+    </div>
+
+    <main class="flex-grow container mx-auto px-4 py-8 max-w-4xl flex flex-col justify-center">
+        
+        <!-- SECTION 0: Login -->
+        <section id="sec-login" class="fade-in max-w-sm mx-auto w-full">
+            <div class="bg-white p-8 rounded-2xl shadow-xl border border-slate-100">
+                <div class="text-center mb-6">
+                    <i class="fa-solid fa-lock text-blue-600 text-4xl mb-3"></i>
+                    <h2 class="text-2xl font-bold text-slate-900">Empathy Scale</h2>
+                    <p class="text-slate-500 text-sm">Interpersonal Reactivity Index (IRI)</p>
+                </div>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Username (Bebas)</label>
+                        <input type="text" id="login-username" placeholder="Masukkan username Anda" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                        <input type="password" id="login-password" placeholder="Gunakan sandi akses" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <button id="btn-login" onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition-colors flex justify-center items-center gap-2 mt-2">
+                        Login / Mulai <i class="fa-solid fa-right-to-bracket"></i>
+                    </button>
+                    <p id="login-error" class="text-red-500 text-sm text-center font-medium h-5"></p>
+                </div>
+            </div>
+            <div class="dev-footer">Developed by Iman N Bajuasijadji</div>
+        </section>
+
+        <!-- SECTION 1: Landing Page -->
+        <section id="sec-landing" class="hide fade-in text-center py-12">
+            <div class="inline-block p-4 bg-blue-50 rounded-full mb-6 text-blue-600 text-4xl">
+                <i class="fa-solid fa-heart-pulse"></i>
+            </div>
+            <h1 class="text-4xl md:text-5xl font-bold mb-4 text-slate-900">Ukur Tingkat Empati Anda</h1>
+            <p class="text-lg text-slate-600 mb-8 max-w-2xl mx-auto">
+                Assessment berbasis saintifik menggunakan <i>Interpersonal Reactivity Index (IRI)</i> karya Mark H. Davis. Pahami kekuatan empati Anda untuk pengembangan karir, kepemimpinan, dan hubungan interpersonal.
+            </p>
+            
+            <!-- Penjelasan 4 Dimensi IRI -->
+            <div class="grid md:grid-cols-2 gap-6 mb-10 max-w-4xl mx-auto text-left">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-blue-500">
+                    <h3 class="font-bold mb-2 flex items-center gap-2 text-slate-800"><i class="fa-solid fa-eye text-blue-500"></i> Perspective Taking (PT)</h3>
+                    <p class="text-sm text-slate-600">Kecenderungan untuk secara spontan mengambil sudut pandang psikologis orang lain. Dimensi kognitif ini menilai seberapa baik Anda memahami situasi dari kacamata orang lain sebelum menghakimi.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-purple-500">
+                    <h3 class="font-bold mb-2 flex items-center gap-2 text-slate-800"><i class="fa-solid fa-book-open text-purple-500"></i> Fantasy Scale (FS)</h3>
+                    <p class="text-sm text-slate-600">Kecenderungan menempatkan diri secara imajinatif ke dalam perasaan dan tindakan karakter fiktif dalam buku, film, atau drama. Mengukur kapasitas imajinasi emosional Anda.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-emerald-500">
+                    <h3 class="font-bold mb-2 flex items-center gap-2 text-slate-800"><i class="fa-solid fa-hand-holding-heart text-emerald-500"></i> Empathic Concern (EC)</h3>
+                    <p class="text-sm text-slate-600">Menilai perasaan simpati, kelembutan hati, dan kepedulian yang berorientasi pada orang lain ketika mereka sedang menghadapi kemalangan atau masalah.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-rose-500">
+                    <h3 class="font-bold mb-2 flex items-center gap-2 text-slate-800"><i class="fa-solid fa-bolt text-rose-500"></i> Personal Distress (PD)</h3>
+                    <p class="text-sm text-slate-600">Mengukur perasaan cemas, gelisah, dan rasa tidak nyaman pribadi (berorientasi pada diri sendiri) ketika menyaksikan situasi interpersonal yang tegang atau darurat.</p>
+                </div>
+            </div>
+
+            <button onclick="switchSection('sec-form')" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center mx-auto gap-2 text-lg">
+                Mulai Assessment <i class="fa-solid fa-arrow-right"></i>
+            </button>
+
+            <!-- Admin Tools on Landing Page -->
+            <div id="admin-tools" class="hide mt-16 text-left bg-white p-6 rounded-xl shadow-md border border-slate-200">
+                <h3 class="text-lg font-bold text-slate-800 border-b pb-2 mb-4"><i class="fa-solid fa-toolbox text-slate-500 mr-2"></i> Alat Administrator</h3>
+                
+                <div class="grid md:grid-cols-2 gap-8">
+                    <!-- Tambah User -->
+                    <div>
+                        <h4 class="font-semibold text-blue-600 mb-3 text-sm uppercase">Tambah Pengguna Baru</h4>
+                        <div class="space-y-3">
+                            <input type="text" id="new-username" placeholder="Username" class="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 outline-none text-sm">
+                            <input type="password" id="new-password" placeholder="Password" class="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 outline-none text-sm">
+                            <select id="new-role" class="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 outline-none text-sm">
+                                <option value="member">Member (Akses Terbatas)</option>
+                                <option value="admin">Admin (Akses Penuh)</option>
+                            </select>
+                            <button id="btn-adduser" onclick="handleAddUser()" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-sm py-2 rounded transition">Tambah User</button>
+                            <p id="adduser-status" class="text-xs text-center font-medium h-4"></p>
+                        </div>
+                    </div>
+
+                    <!-- Buka Data -->
+                    <div>
+                        <h4 class="font-semibold text-emerald-600 mb-3 text-sm uppercase">Buka Data Tersimpan</h4>
+                        <p class="text-xs text-slate-500 mb-2">Pilih data responden sebelumnya untuk melihat hasil laporannya.</p>
+                        <div class="flex gap-2">
+                            <select id="select-respondent" class="flex-grow px-3 py-1.5 border rounded focus:ring-1 focus:ring-emerald-500 outline-none text-sm">
+                                <option value="">Memuat data...</option>
+                            </select>
+                            <button id="btn-loaddata" onclick="loadSavedData()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm py-1.5 px-4 rounded transition">Buka</button>
+                        </div>
+                        <p id="loaddata-status" class="text-xs text-slate-500 mt-2 h-4"></p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="dev-footer">Developed by Iman N Bajuasijadji</div>
+        </section>
+
+        <!-- SECTION 2: Form Data Diri -->
+        <section id="sec-form" class="hide fade-in max-w-xl mx-auto w-full">
+            <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+                <div class="bg-blue-600 p-6 text-white">
+                    <h2 class="text-2xl font-bold mb-1">Data Diri</h2>
+                    <p class="text-blue-100 text-sm">Informasi ini digunakan untuk personalisasi laporan.</p>
+                </div>
+                <div class="p-6 md:p-8 space-y-5">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Nama Lengkap</label>
+                        <input type="text" id="inp-name" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="Cth: Budi Santoso" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                        <input type="email" id="inp-email" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="Cth: budi@email.com" required>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Jenis Kelamin</label>
+                            <select id="inp-gender" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                                <option value="L">Laki-laki</option>
+                                <option value="P">Perempuan</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Usia</label>
+                            <input type="number" id="inp-age" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="Cth: 25">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Pekerjaan / Instansi</label>
+                        <input type="text" id="inp-profession" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="Cth: HR Staff / PT Maju">
+                    </div>
+                    
+                    <div class="pt-4 flex justify-between items-center">
+                        <button onclick="switchSection('sec-landing')" class="text-slate-500 hover:text-slate-800 font-medium px-4 py-2">Kembali</button>
+                        
+                        <div class="flex items-center gap-2">
+                            <!-- Tombol Clear Form -->
+                            <button type="button" onclick="clearRespondentForm()" class="text-rose-500 hover:text-rose-700 hover:bg-rose-50 font-medium px-4 py-2 rounded-lg transition border border-rose-200 flex items-center gap-1.5 text-sm">
+                                <i class="fa-solid fa-trash-can"></i> Clear Form
+                            </button>
+                            <button onclick="startAssessment()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg shadow transition-colors">
+                                Lanjut <i class="fa-solid fa-chevron-right ml-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="dev-footer">Developed by Iman N Bajuasijadji</div>
+        </section>
+
+        <!-- SECTION 3: Assessment -->
+        <section id="sec-assessment" class="hide fade-in w-full max-w-3xl mx-auto">
+            <!-- Progress Bar -->
+            <div class="mb-8">
+                <div class="flex justify-between text-sm font-medium text-slate-500 mb-2">
+                    <span>Progress</span>
+                    <span id="progress-text">0%</span>
+                </div>
+                <div class="w-full bg-slate-200 rounded-full h-2.5">
+                    <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Question Card -->
+            <div class="bg-white rounded-2xl shadow-md p-6 md:p-10 mb-6 border border-slate-100 min-h-[300px] flex flex-col justify-center">
+                <h3 class="text-sm font-bold text-blue-600 mb-3 uppercase tracking-wider">Pernyataan <span id="q-number">1</span>/28</h3>
+                <p id="q-text" class="text-xl md:text-2xl font-medium text-slate-800 mb-8 leading-snug">
+                    <!-- Text pertanyaan akan muncul disini -->
+                </p>
+                
+                <!-- Likert Options -->
+                <div class="grid grid-cols-5 gap-2 md:gap-4 relative" id="likert-options">
+                    <!-- Garis penghubung -->
+                    <div class="absolute top-1/2 left-0 w-full h-1 bg-slate-200 -z-10 -translate-y-1/2 rounded px-4 hidden md:block"></div>
+                    
+                    <!-- Opsi akan di-render via JS -->
+                </div>
+                <div class="flex justify-between text-xs md:text-sm font-medium text-slate-500 mt-4 px-2">
+                    <span class="text-left w-1/3">Sangat Tidak Sesuai</span>
+                    <span class="text-center w-1/3">Netral</span>
+                    <span class="text-right w-1/3">Sangat Sesuai</span>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="flex justify-between items-center">
+                <button id="btn-prev" onclick="prevQuestion()" class="text-slate-500 hover:text-blue-600 font-medium px-4 py-2 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2">
+                    <i class="fa-solid fa-arrow-left"></i> Sebelumnya
+                </button>
+
+                <!-- Tombol Clear Assessment -->
+                <button type="button" onclick="clearAssessment()" class="text-rose-500 hover:text-rose-700 hover:bg-rose-50 font-medium px-4 py-2 rounded-lg transition border border-rose-200 flex items-center gap-1.5 text-sm">
+                    <i class="fa-solid fa-rotate-left"></i> Clear Jawaban
+                </button>
+
+                <button id="btn-next" onclick="nextQuestion()" disabled class="bg-slate-300 text-slate-500 font-medium py-2 px-6 rounded-lg transition-colors flex items-center gap-2 cursor-not-allowed">
+                    Selanjutnya <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+            <div class="dev-footer">Developed by Iman N Bajuasijadji</div>
+        </section>
+
+        <!-- SECTION 4: Loading Calculation -->
+        <section id="sec-loading" class="hide fade-in text-center py-20 flex flex-col items-center justify-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-6"></div>
+            <h2 class="text-2xl font-bold text-slate-800 mb-2">Menganalisis Profil Empati Anda...</h2>
+            <p class="text-slate-500">Engine kami sedang memproses skor dan menyusun laporan menggunakan metode IRI.</p>
+            <div class="dev-footer mt-10">Developed by Iman N Bajuasijadji</div>
+        </section>
+
+        <!-- SECTION 5: Results Dashboard -->
+        <section id="sec-result" class="hide fade-in w-full pb-10">
+            
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <div>
+                    <h2 class="text-3xl font-bold text-slate-900">Personal Empathy Report</h2>
+                    <p class="text-slate-500">Disusun untuk <strong id="res-name" class="text-slate-700">User</strong></p>
+                </div>
+                
+                <div class="flex flex-wrap items-center gap-3">
+                    <!-- Fitur Khusus Admin: Ambil Data di Database (Sheet1) -->
+                    <div id="admin-result-tools" class="hide flex items-center gap-2 bg-slate-100 p-1.5 rounded-lg border border-slate-200">
+                        <select id="select-respondent-result" class="px-3 py-1.5 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 outline-none text-xs bg-white text-slate-700 max-w-[200px]">
+                            <option value="">Memuat data...</option>
+                        </select>
+                        <button onclick="loadSavedDataFromResult()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 px-3 rounded-md shadow-sm transition flex items-center gap-1 text-xs">
+                            <i class="fa-solid fa-database"></i> Ambil Data di Database
+                        </button>
+                    </div>
+
+                    <button onclick="downloadImage()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-5 rounded-lg shadow transition flex items-center gap-2">
+                        <i class="fa-solid fa-image"></i> Simpan Gambar
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <!-- Overall Score Gauge -->
+                <div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-100 flex flex-col items-center justify-center text-center col-span-1 md:col-span-1">
+                    <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wide mb-4">Overall Empathy Index</h3>
+                    <div class="relative w-40 h-40 flex items-center justify-center mb-2">
+                        <canvas id="gaugeChart"></canvas>
+                        <div class="absolute flex flex-col items-center">
+                            <span id="res-overall-score" class="text-4xl font-black text-slate-800">0%</span>
+                        </div>
+                    </div>
+                    <span id="badge-level" class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-bold mt-2 border border-blue-200">Menengah</span>
+                </div>
+
+                <!-- Radar Chart -->
+                <div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-100 col-span-1 md:col-span-2 flex flex-col items-center">
+                    <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wide w-full text-left mb-2">Dimensi IRI (Interpersonal Reactivity Index)</h3>
+                    <div class="w-full h-64 relative">
+                        <canvas id="radarChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detail Dimensi -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 avoid-break">
+                <!-- PT -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 border-l-4 border-l-blue-500">
+                    <div class="flex justify-between items-start mb-2">
+                        <h4 class="font-bold text-slate-800">Perspective Taking (PT)</h4>
+                        <span id="score-pt" class="font-black text-blue-600 bg-blue-50 px-2 py-1 rounded text-sm">0.0</span>
+                    </div>
+                    <p class="text-sm text-slate-600">Kemampuan secara spontan mengadopsi sudut pandang psikologis orang lain.</p>
+                    <div class="mt-3 w-full bg-slate-100 rounded-full h-1.5"><div id="bar-pt" class="bg-blue-500 h-1.5 rounded-full" style="width:0%"></div></div>
+                </div>
+                <!-- FS -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 border-l-4 border-l-purple-500">
+                    <div class="flex justify-between items-start mb-2">
+                        <h4 class="font-bold text-slate-800">Fantasy Scale (FS)</h4>
+                        <span id="score-fs" class="font-black text-purple-600 bg-purple-50 px-2 py-1 rounded text-sm">0.0</span>
+                    </div>
+                    <p class="text-sm text-slate-600">Kecenderungan menempatkan diri secara imajinatif ke dalam perasaan tokoh fiktif.</p>
+                    <div class="mt-3 w-full bg-slate-100 rounded-full h-1.5"><div id="bar-fs" class="bg-purple-500 h-1.5 rounded-full" style="width:0%"></div></div>
+                </div>
+                <!-- EC -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 border-l-4 border-l-emerald-500">
+                    <div class="flex justify-between items-start mb-2">
+                        <h4 class="font-bold text-slate-800">Empathic Concern (EC)</h4>
+                        <span id="score-ec" class="font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded text-sm">0.0</span>
+                    </div>
+                    <p class="text-sm text-slate-600">Perasaan simpati dan kepedulian yang berorientasi pada orang lain.</p>
+                    <div class="mt-3 w-full bg-slate-100 rounded-full h-1.5"><div id="bar-ec" class="bg-emerald-500 h-1.5 rounded-full" style="width:0%"></div></div>
+                </div>
+                <!-- PD -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 border-l-4 border-l-rose-500">
+                    <div class="flex justify-between items-start mb-2">
+                        <h4 class="font-bold text-slate-800">Personal Distress (PD)</h4>
+                        <span id="score-pd" class="font-black text-rose-600 bg-rose-50 px-2 py-1 rounded text-sm">0.0</span>
+                    </div>
+                    <p class="text-sm text-slate-600">Perasaan cemas dan tidak nyaman (berorientasi pada diri) dalam situasi tegang.</p>
+                    <div class="mt-3 w-full bg-slate-100 rounded-full h-1.5"><div id="bar-pd" class="bg-rose-500 h-1.5 rounded-full" style="width:0%"></div></div>
+                </div>
+            </div>
+
+            <!-- Rule-Based AI Engine Result (Narasi) -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden page-break">
+                <div class="bg-slate-800 p-5 text-white flex items-center gap-3">
+                    <i class="fa-solid fa-wand-magic-sparkles text-yellow-400"></i>
+                    <h3 class="text-lg font-bold">Insight & Rekomendasi Terpersonalisasi</h3>
+                </div>
+                <div class="p-6 md:p-8 space-y-6">
+                    
+                    <div>
+                        <h4 class="text-emerald-600 font-bold flex items-center gap-2 mb-2">
+                            <i class="fa-solid fa-star"></i> Kekuatan Utama
+                        </h4>
+                        <ul id="res-strengths" class="list-disc list-inside text-slate-700 space-y-1 ml-2"></ul>
+                    </div>
+
+                    <hr class="border-slate-100">
+
+                    <div>
+                        <h4 class="text-amber-500 font-bold flex items-center gap-2 mb-2">
+                            <i class="fa-solid fa-bullseye"></i> Area Pengembangan
+                        </h4>
+                        <ul id="res-improvements" class="list-disc list-inside text-slate-700 space-y-1 ml-2"></ul>
+                    </div>
+                    
+                    <hr class="border-slate-100">
+
+                    <div class="bg-blue-50 p-5 rounded-xl border border-blue-100">
+                        <h4 class="text-blue-800 font-bold flex items-center gap-2 mb-3">
+                            <i class="fa-solid fa-lightbulb"></i> Rekomendasi Praktis
+                        </h4>
+                        <ul id="res-recommendations" class="space-y-3 text-slate-700"></ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="save-status" class="mt-4 text-center text-sm font-medium text-slate-500">
+                <i class="fa-solid fa-cloud-arrow-up mr-1"></i> Menyimpan hasil ke database...
+            </div>
+            
+            <div class="dev-footer pb-4">Developed by Iman N Bajuasijadji</div>
+        </section>
+
+    </main>
+
+    <script>
+        // Data Pertanyaan IRI (28 Items)
+        // Format: { text, dim (dimensi), reverse (boolean) }
+        const questions = [
+            { text: "Saya cukup sering melamun dan berfantasi tentang hal-hal yang mungkin terjadi pada saya.", dim: "FS", reverse: false },
+            { text: "Saya sering memiliki perasaan iba dan peduli terhadap orang-orang yang kurang beruntung dibanding saya.", dim: "EC", reverse: false },
+            { text: "Saya terkadang merasa sulit untuk melihat sesuatu dari sudut pandang orang lain.", dim: "PT", reverse: true },
+            { text: "Kadang-kadang saya tidak merasa begitu kasihan pada orang lain ketika mereka menghadapi masalah.", dim: "EC", reverse: true },
+            { text: "Saya benar-benar terbawa oleh perasaan karakter-karakter dalam sebuah novel.", dim: "FS", reverse: false },
+            { text: "Dalam situasi darurat, saya merasa khawatir dan tidak tenang.", dim: "PD", reverse: false },
+            { text: "Saya biasanya objektif saat menonton film/drama, dan jarang benar-benar hanyut di dalamnya.", dim: "FS", reverse: true },
+            { text: "Saya mencoba melihat sudut pandang semua pihak sebelum mengambil keputusan.", dim: "PT", reverse: false },
+            { text: "Ketika melihat seseorang dimanfaatkan, saya merasa ingin melindungi mereka.", dim: "EC", reverse: false },
+            { text: "Saya terkadang merasa tidak berdaya ketika berada di tengah situasi yang sangat emosional.", dim: "PD", reverse: false },
+            { text: "Saya terkadang mencoba memahami teman-teman saya dengan membayangkan situasi dari kacamata mereka.", dim: "PT", reverse: false },
+            { text: "Terlibat secara mendalam dalam buku atau film yang bagus adalah hal yang cukup jarang bagi saya.", dim: "FS", reverse: true },
+            { text: "Ketika melihat seseorang terluka, saya cenderung tetap tenang.", dim: "PD", reverse: true },
+            { text: "Kemalangan orang lain biasanya tidak begitu mengganggu pikiran saya.", dim: "EC", reverse: true },
+            { text: "Jika saya yakin saya benar, saya tidak membuang waktu mendengarkan argumen orang lain.", dim: "PT", reverse: true },
+            { text: "Setelah menonton drama atau film, saya merasa seolah-olah menjadi salah satu karakternya.", dim: "FS", reverse: false },
+            { text: "Berada dalam situasi emosional yang tegang menakutkan bagi saya.", dim: "PD", reverse: false },
+            { text: "Ketika melihat seseorang diperlakukan tidak adil, kadang-kadang saya tidak merasa begitu kasihan pada mereka.", dim: "EC", reverse: true },
+            { text: "Saya biasanya cukup efektif dalam menangani situasi darurat.", dim: "PD", reverse: true },
+            { text: "Saya sering kali merasa tersentuh oleh kejadian yang saya lihat.", dim: "EC", reverse: false },
+            { text: "Saya percaya bahwa ada dua sisi dalam setiap masalah dan mencoba untuk melihat keduanya.", dim: "PT", reverse: false },
+            { text: "Saya menggambarkan diri saya sebagai orang yang cukup berhati lembut.", dim: "EC", reverse: false },
+            { text: "Saat menonton film, saya dapat dengan mudah menempatkan diri di posisi karakter utama.", dim: "FS", reverse: false },
+            { text: "Saya cenderung kehilangan kendali selama situasi darurat.", dim: "PD", reverse: false },
+            { text: "Ketika saya kesal pada seseorang, saya biasanya mencoba 'menempatkan diri di posisinya' sementara waktu.", dim: "PT", reverse: false },
+            { text: "Ketika membaca cerita, saya membayangkan bagaimana perasaan saya jika peristiwa itu terjadi pada saya.", dim: "FS", reverse: false },
+            { text: "Ketika melihat seseorang yang sangat membutuhkan bantuan saat darurat, saya menjadi panik/hancur.", dim: "PD", reverse: false },
+            { text: "Sebelum mengkritik seseorang, saya mencoba membayangkan perasaan saya jika berada di posisinya.", dim: "PT", reverse: false }
+        ];
+
+        // State Aplikasi
+        let currentUser = { username: null, role: null };
+        let currentQuestion = 0;
+        let answers = new Array(28).fill(null);
+        let userProfile = {};
+        
+        let radarChartInstance = null;
+        let gaugeChartInstance = null;
+
+        // Helper Navigasi Section
+        function switchSection(sectionId) {
+            // Logika Pembatasan Navigasi Member
+            if (currentUser.role === 'member' && sectionId !== 'sec-login' && sectionId !== 'sec-landing') {
+                // Member harus melewati flow secara berurutan. Validasi form sebelum masuk assessment
+                if (sectionId === 'sec-assessment' && !userProfile.name) {
+                    alert("Silahkan isi data diri terlebih dahulu.");
+                    return switchSection('sec-form');
+                }
+                if (sectionId === 'sec-result' && answers.includes(null)) {
+                     alert("Selesaikan assessment terlebih dahulu.");
+                     return;
+                }
+            }
+
+            ['sec-login', 'sec-landing', 'sec-form', 'sec-assessment', 'sec-loading', 'sec-result'].forEach(id => {
+                document.getElementById(id).classList.add('hide');
+            });
+            document.getElementById(sectionId).classList.remove('hide');
+            window.scrollTo(0, 0);
+        }
+
+        // Fungsi Login
+        function handleLogin() {
+            const user = document.getElementById('login-username').value.trim();
+            const pass = document.getElementById('login-password').value.trim();
+            const btn = document.getElementById('btn-login');
+            const err = document.getElementById('login-error');
+
+            if (!user || !pass) {
+                err.innerText = "Isi username dan password terlebih dahulu.";
+                return;
+            }
+
+            err.innerText = "";
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Memeriksa...';
+            btn.disabled = true;
+
+            if (typeof google !== 'undefined') {
+                google.script.run
+                    .withSuccessHandler(res => {
+                        btn.innerHTML = 'Login / Mulai <i class="fa-solid fa-right-to-bracket"></i>';
+                        btn.disabled = false;
+                        
+                        if (res.status === 'success') {
+                            currentUser = { username: res.username, role: res.role };
+                            setupEnvironment();
+                            switchSection('sec-landing');
+                        } else {
+                            err.innerText = res.message;
+                        }
+                    })
+                    .withFailureHandler(error => {
+                        btn.innerHTML = 'Login / Mulai <i class="fa-solid fa-right-to-bracket"></i>';
+                        btn.disabled = false;
+                        err.innerText = "Gagal terhubung ke server.";
+                    })
+                    .authenticateUser(user, pass);
+            } else {
+                // Simulasi Local
+                setTimeout(() => {
+                    currentUser = { username: user, role: user === 'admin' ? 'admin' : 'member' };
+                    setupEnvironment();
+                    switchSection('sec-landing');
+                }, 500);
+            }
+        }
+
+        function logout() {
+            currentUser = { username: null, role: null };
+            document.getElementById('nav-user').classList.add('hide');
+            document.getElementById('admin-nav').classList.add('hide');
+            document.getElementById('admin-tools').classList.add('hide');
+            document.getElementById('admin-result-tools').classList.add('hide');
+            
+            // Reset state
+            userProfile = {};
+            answers = new Array(28).fill(null);
+            currentQuestion = 0;
+            
+            document.getElementById('login-username').value = '';
+            document.getElementById('login-password').value = '';
+            document.getElementById('login-error').innerText = '';
+            
+            switchSection('sec-login');
+        }
+
+        // Setup environment berdasarkan role
+        function setupEnvironment() {
+            const navUser = document.getElementById('nav-user');
+            navUser.classList.remove('hide');
+            document.getElementById('nav-username').innerText = currentUser.username;
+            
+            const roleBadge = document.getElementById('nav-role');
+            roleBadge.innerText = currentUser.role.toUpperCase();
+            
+            if (currentUser.role === 'admin') {
+                roleBadge.className = "ml-2 px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800";
+                document.getElementById('admin-nav').classList.remove('hide');
+                document.getElementById('admin-tools').classList.remove('hide');
+                document.getElementById('admin-result-tools').classList.remove('hide');
+                fetchRespondentsList();
+            } else {
+                roleBadge.className = "ml-2 px-2 py-0.5 rounded text-xs font-bold bg-slate-200 text-slate-700";
+                document.getElementById('admin-nav').classList.add('hide');
+                document.getElementById('admin-tools').classList.add('hide');
+                document.getElementById('admin-result-tools').classList.add('hide');
+            }
+        }
+
+        // Admin: Tambah User
+        function handleAddUser() {
+            const user = document.getElementById('new-username').value.trim();
+            const pass = document.getElementById('new-password').value.trim();
+            const role = document.getElementById('new-role').value;
+            const stat = document.getElementById('adduser-status');
+            const btn = document.getElementById('btn-adduser');
+
+            if(!user || !pass) { stat.innerText = "Lengkapi form."; stat.className = "text-xs text-center font-medium h-4 text-red-500"; return; }
+
+            stat.innerText = "Memproses...";
+            stat.className = "text-xs text-center font-medium h-4 text-slate-500";
+            btn.disabled = true;
+
+            if (typeof google !== 'undefined') {
+                google.script.run
+                    .withSuccessHandler(res => {
+                        btn.disabled = false;
+                        if(res.status === 'success') {
+                            stat.innerText = res.message;
+                            stat.className = "text-xs text-center font-medium h-4 text-emerald-500";
+                            document.getElementById('new-username').value = '';
+                            document.getElementById('new-password').value = '';
+                        } else {
+                            stat.innerText = res.message;
+                            stat.className = "text-xs text-center font-medium h-4 text-red-500";
+                        }
+                        setTimeout(()=>{ stat.innerText = ""; }, 3000);
+                    })
+                    .addUser(user, pass, role);
+            }
+        }
+
+        // Admin: Load daftar dropdown (Landing Page & Dashboard Hasil)
+        function fetchRespondentsList() {
+            const selLanding = document.getElementById('select-respondent');
+            const selResult = document.getElementById('select-respondent-result');
+            
+            if(selLanding) selLanding.innerHTML = '<option value="">Memuat data...</option>';
+            if(selResult) selResult.innerHTML = '<option value="">Memuat data...</option>';
+            
+            if (typeof google !== 'undefined') {
+                google.script.run
+                    .withSuccessHandler(res => {
+                        let optionsHtml = '';
+                        if(res.status === 'success' && res.data.length > 0) {
+                            optionsHtml = '<option value="">-- Pilih Data Responden --</option>';
+                            res.data.forEach(item => {
+                                optionsHtml += `<option value="${item.row}">${item.name}</option>`;
+                            });
+                        } else {
+                            optionsHtml = '<option value="">Belum ada data tersedia</option>';
+                        }
+                        if(selLanding) selLanding.innerHTML = optionsHtml;
+                        if(selResult) selResult.innerHTML = optionsHtml;
+                    })
+                    .getRespondentsList();
+            }
+        }
+
+        // Admin: Load data spesifik dari landing page
+        function loadSavedData() {
+            const row = document.getElementById('select-respondent').value;
+            const stat = document.getElementById('loaddata-status');
+            
+            if(!row) return;
+            
+            stat.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menarik data...';
+            
+            if (typeof google !== 'undefined') {
+                google.script.run
+                    .withSuccessHandler(res => {
+                        stat.innerHTML = '';
+                        if (res.status === 'success') {
+                            userProfile = res.profile;
+                            document.getElementById('save-status').innerHTML = '<i class="fa-solid fa-database text-emerald-500"></i> Mode Tinjau Data Arsip';
+                            displayResults(res.scores, res.overallScore);
+                            generateRuleBasedNarrative(res.scores);
+                            switchSection('sec-result');
+                        } else {
+                            stat.innerText = res.message;
+                        }
+                    })
+                    .getRespondentData(row);
+            }
+        }
+
+        // Admin: Load data spesifik langsung dari Tab Dashboard Hasil
+        function loadSavedDataFromResult() {
+            const row = document.getElementById('select-respondent-result').value;
+            const stat = document.getElementById('save-status');
+            
+            if(!row) {
+                alert("Silakan pilih data responden terlebih dahulu.");
+                return;
+            }
+            
+            stat.style.display = 'block';
+            stat.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengambil data dari Sheet1...';
+            
+            if (typeof google !== 'undefined') {
+                google.script.run
+                    .withSuccessHandler(res => {
+                        if (res.status === 'success') {
+                            userProfile = res.profile;
+                            stat.innerHTML = '<i class="fa-solid fa-database text-emerald-500"></i> Data berhasil dimuat dari Database Sheet1 (Mode Tinjau Arsip)';
+                            displayResults(res.scores, res.overallScore);
+                            generateRuleBasedNarrative(res.scores);
+                        } else {
+                            stat.innerHTML = '<i class="fa-solid fa-xmark text-red-500"></i> ' + res.message;
+                        }
+                    })
+                    .withFailureHandler(err => {
+                        stat.innerHTML = '<i class="fa-solid fa-xmark text-red-500"></i> Gagal mengambil data dari Google Sheets.';
+                    })
+                    .getRespondentData(row);
+            }
+        }
+
+        // Clear Form Responden
+        function clearRespondentForm() {
+            if (confirm("Apakah Anda yakin ingin membersihkan isian formulir data diri?")) {
+                document.getElementById('inp-name').value = '';
+                document.getElementById('inp-email').value = '';
+                document.getElementById('inp-gender').value = 'L';
+                document.getElementById('inp-age').value = '';
+                document.getElementById('inp-profession').value = '';
+                userProfile = {};
+            }
+        }
+
+        // Clear Assessment / Kuesioner
+        function clearAssessment() {
+            if (confirm("Apakah Anda yakin ingin membersihkan semua jawaban kuesioner dan mengulang kembali?")) {
+                answers = new Array(28).fill(null);
+                currentQuestion = 0;
+                renderQuestion();
+            }
+        }
+
+        // Start Assessment (Validasi Form)
+        function startAssessment() {
+            const name = document.getElementById('inp-name').value.trim();
+            const email = document.getElementById('inp-email').value.trim();
+            
+            if(!name || !email) {
+                alert("Mohon lengkapi Nama dan Email Anda.");
+                return;
+            }
+
+            userProfile = {
+                name: name,
+                email: email,
+                gender: document.getElementById('inp-gender').value,
+                age: document.getElementById('inp-age').value,
+                profession: document.getElementById('inp-profession').value
+            };
+
+            // Update UI
+            document.getElementById('nav-user').classList.remove('hide');
+            document.getElementById('nav-username').innerText = name.split(' ')[0];
+            
+            switchSection('sec-assessment');
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            const q = questions[currentQuestion];
+            document.getElementById('q-number').innerText = currentQuestion + 1;
+            document.getElementById('q-text').innerText = q.text;
+            
+            // Render likert options (Skala 0-4 standar IRI: 0=Sangat Tidak Sesuai, 4=Sangat Sesuai)
+            const optionsContainer = document.getElementById('likert-options');
+            optionsContainer.innerHTML = ''; // Clear
+            
+            for(let i=0; i<=4; i++) {
+                const isChecked = answers[currentQuestion] === i ? 'checked' : '';
+                optionsContainer.innerHTML += `
+                    <label class="likert-container flex flex-col items-center gap-3">
+                        <input type="radio" name="answer" value="${i}" class="likert-radio" ${isChecked} onchange="selectAnswer(${i})">
+                        <span class="likert-label text-xs md:text-sm font-semibold ${isChecked ? 'text-blue-600' : 'text-slate-400'}">${i}</span>
+                    </label>
+                `;
+            }
+
+            // Update Buttons & Progress
+            document.getElementById('btn-prev').disabled = currentQuestion === 0;
+            updateNextButton();
+            
+            const progress = Math.round(((currentQuestion) / 28) * 100);
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+            document.getElementById('progress-text').innerText = `${progress}%`;
+        }
+
+        function selectAnswer(val) {
+            answers[currentQuestion] = val;
+            
+            // Re-render labels color (visual feedback)
+            const labels = document.querySelectorAll('.likert-label');
+            labels.forEach((l, idx) => {
+                if(idx === val) {
+                    l.classList.remove('text-slate-400');
+                    l.classList.add('text-blue-600');
+                } else {
+                    l.classList.add('text-slate-400');
+                    l.classList.remove('text-blue-600');
+                }
+            });
+
+            updateNextButton();
+            
+            // Auto next setelah 400ms jika bukan soal terakhir
+            if (currentQuestion < 27) {
+                setTimeout(() => { if(answers[currentQuestion] !== null) nextQuestion(); }, 400);
+            }
+        }
+
+        function updateNextButton() {
+            const btn = document.getElementById('btn-next');
+            if(answers[currentQuestion] !== null) {
+                btn.disabled = false;
+                btn.classList.remove('bg-slate-300', 'text-slate-500', 'cursor-not-allowed');
+                btn.classList.add('bg-blue-600', 'hover:bg-blue-700', 'text-white', 'cursor-pointer');
+                if(currentQuestion === 27) btn.innerHTML = 'Selesai <i class="fa-solid fa-check"></i>';
+                else btn.innerHTML = 'Selanjutnya <i class="fa-solid fa-arrow-right"></i>';
+            } else {
+                btn.disabled = true;
+                btn.classList.add('bg-slate-300', 'text-slate-500', 'cursor-not-allowed');
+                btn.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'text-white', 'cursor-pointer');
+            }
+        }
+
+        function nextQuestion() {
+            if(answers[currentQuestion] === null) return;
+            
+            if(currentQuestion < 27) {
+                currentQuestion++;
+                renderQuestion();
+            } else {
+                finishAssessment();
+            }
+        }
+
+        function prevQuestion() {
+            if(currentQuestion > 0) {
+                currentQuestion--;
+                renderQuestion();
+            }
+        }
+
+        function finishAssessment() {
+            switchSection('sec-loading');
+            
+            // Simulasi loading processing 1.5 detik agar feel analitiknya terasa
+            setTimeout(() => {
+                processResults();
+            }, 1500);
+        }
+
+        function processResults() {
+            // Struktur penyimpanan skor
+            let scores = {
+                PT: { sum: 0, items: 7 },
+                FS: { sum: 0, items: 7 },
+                EC: { sum: 0, items: 7 },
+                PD: { sum: 0, items: 7 }
+            };
+
+            // Kalkulasi dengan Reverse Scoring
+            answers.forEach((val, index) => {
+                const q = questions[index];
+                // Jika reverse, balik nilai: 0->4, 1->3, 2->2, 3->1, 4->0 (Formula: 4 - val)
+                let finalVal = q.reverse ? (4 - val) : val;
+                scores[q.dim].sum += finalVal;
+            });
+
+            // Hitung rata-rata tiap dimensi (Skala 0-4)
+            Object.keys(scores).forEach(key => {
+                scores[key].avg = parseFloat((scores[key].sum / scores[key].items).toFixed(2));
+            });
+
+            // Overall Score Kalkulasi Kustom (Adaptasi UI)
+            let pt_norm = (scores.PT.avg / 4) * 100;
+            let ec_norm = (scores.EC.avg / 4) * 100;
+            let overallScore = Math.round((pt_norm + ec_norm) / 2);
+
+            displayResults(scores, overallScore);
+            generateRuleBasedNarrative(scores);
+            
+            // Trigger Save to Google Sheets (Hanya bekerja di environment Google Apps Script)
+            if (typeof google !== 'undefined') {
+                if(document.getElementById('save-status').innerText.includes('Arsip')) return;
+
+                const payload = { profile: userProfile, scores: scores, overallScore: overallScore };
+                google.script.run
+                    .withSuccessHandler((res) => {
+                        if(res.status === 'success') {
+                           document.getElementById('save-status').innerHTML = '<i class="fa-solid fa-check text-emerald-500"></i> Hasil berhasil disimpan di Cloud.';
+                           if(currentUser.role === 'admin') fetchRespondentsList();
+                        } else {
+                           document.getElementById('save-status').innerHTML = '<i class="fa-solid fa-xmark text-red-500"></i> Gagal menyimpan: ' + res.message;
+                        }
+                    })
+                    .withFailureHandler(onSaveError)
+                    .saveToSheet(payload);
+            } else {
+                document.getElementById('save-status').innerHTML = '<i class="fa-solid fa-triangle-exclamation text-yellow-500"></i> Local mode (Tidak terhubung ke Sheets)';
+            }
+        }
+
+        function onSaveError(err) {
+            document.getElementById('save-status').innerHTML = '<i class="fa-solid fa-xmark text-red-500"></i> Gagal menyimpan ke server.';
+        }
+
+        function displayResults(scores, overall) {
+            switchSection('sec-result');
+            document.getElementById('res-name').innerText = userProfile.name;
+            
+            // Render Text Scores
+            document.getElementById('score-pt').innerText = scores.PT.avg;
+            document.getElementById('score-fs').innerText = scores.FS.avg;
+            document.getElementById('score-ec').innerText = scores.EC.avg;
+            document.getElementById('score-pd').innerText = scores.PD.avg;
+
+            // Render Progress Bars Dimensi
+            document.getElementById('bar-pt').style.width = `${(scores.PT.avg / 4) * 100}%`;
+            document.getElementById('bar-fs').style.width = `${(scores.FS.avg / 4) * 100}%`;
+            document.getElementById('bar-ec').style.width = `${(scores.EC.avg / 4) * 100}%`;
+            document.getElementById('bar-pd').style.width = `${(scores.PD.avg / 4) * 100}%`;
+
+            // Badge Level
+            let badge = document.getElementById('badge-level');
+            if (overall >= 75) { badge.innerText = "Tinggi"; badge.className = "px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-bold mt-2 border border-emerald-200"; }
+            else if (overall >= 50) { badge.innerText = "Menengah"; badge.className = "px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-bold mt-2 border border-blue-200"; }
+            else { badge.innerText = "Perlu Perhatian"; badge.className = "px-3 py-1 bg-rose-100 text-rose-700 rounded-full text-sm font-bold mt-2 border border-rose-200"; }
+
+            // Animasi Angka Overall
+            let currentDisplay = 0;
+            const timer = setInterval(() => {
+                currentDisplay += 2;
+                if(currentDisplay >= overall) {
+                    currentDisplay = overall;
+                    clearInterval(timer);
+                }
+                document.getElementById('res-overall-score').innerText = `${currentDisplay}%`;
+            }, 20);
+
+            renderCharts(scores, overall);
+        }
+
+        function renderCharts(scores, overall) {
+            // Radar Chart (4 Dimensi)
+            const ctxRadar = document.getElementById('radarChart').getContext('2d');
+            if(radarChartInstance) radarChartInstance.destroy();
+            
+            // Convert to 0-100 for better chart display
+            const dataRadar = [
+                (scores.PT.avg / 4) * 100, 
+                (scores.EC.avg / 4) * 100, 
+                (scores.PD.avg / 4) * 100, 
+                (scores.FS.avg / 4) * 100
+            ];
+
+            radarChartInstance = new Chart(ctxRadar, {
+                type: 'radar',
+                data: {
+                    labels: ['Perspective Taking', 'Empathic Concern', 'Personal Distress', 'Fantasy Scale'],
+                    datasets: [{
+                        label: 'Skor Anda',
+                        data: dataRadar,
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { r: { min: 0, max: 100, ticks: { display: false } } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // Doughnut / Gauge Chart
+            const ctxGauge = document.getElementById('gaugeChart').getContext('2d');
+            if(gaugeChartInstance) gaugeChartInstance.destroy();
+            
+            gaugeChartInstance = new Chart(ctxGauge, {
+                type: 'doughnut',
+                data: {
+                    datasets: [{
+                        data: [overall, 100 - overall],
+                        backgroundColor: [
+                            overall >= 75 ? '#10b981' : overall >= 50 ? '#3b82f6' : '#f43f5e',
+                            '#f1f5f9'
+                        ],
+                        borderWidth: 0,
+                        circumference: 270,
+                        rotation: 225,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '80%',
+                    plugins: { tooltip: { enabled: false }, legend: { display: false } }
+                }
+            });
+        }
+
+        /**
+         * Rule-Based Inference Engine
+         * Menghasilkan teks narasi berdasarkan kombinasi threshold skor.
+         * Threshold acuan IRI (0-4 skala): Rendah < 1.8, Sedang 1.8 - 2.8, Tinggi > 2.8
+         */
+        function generateRuleBasedNarrative(scores) {
+            const pt = scores.PT.avg;
+            const ec = scores.EC.avg;
+            const pd = scores.PD.avg;
+            const fs = scores.FS.avg;
+
+            let strengths = [];
+            let improvements = [];
+            let recommendations = [];
+
+            // Evaluasi Perspective Taking (PT) - Kognitif
+            if (pt >= 2.8) {
+                strengths.push("Sangat objektif dan mampu melihat masalah dari berbagai sudut pandang sebelum menghakimi.");
+                strengths.push("Memiliki kemampuan 'Active Listening' yang baik, sangat berharga dalam kolaborasi tim.");
+            } else if (pt <= 1.8) {
+                improvements.push("Terkadang kesulitan untuk memahami pola pikir atau alasan di balik tindakan orang lain (Perspective Taking rendah).");
+                recommendations.push("<span class='font-semibold'>Latihan Kognitif:</span> Sebelum merespons konflik, beri jeda 3 detik dan tanyakan 'Mengapa dia bertindak seperti itu?'");
+            }
+
+            // Evaluasi Empathic Concern (EC) - Emosional Positif
+            if (ec >= 2.8) {
+                strengths.push("Memiliki kepedulian sosial yang tinggi; rekan kerja dan orang terdekat merasa aman saat bercerita pada Anda.");
+            } else if (ec <= 1.8) {
+                improvements.push("Dapat terlihat terlalu pragmatis atau dingin oleh orang lain saat mereka sedang menghadapi krisis emosional.");
+                recommendations.push("<span class='font-semibold'>Validasi Emosi:</span> Biasakan menggunakan kalimat seperti 'Saya mengerti ini pasti berat untukmu' sebelum memberikan solusi logis.");
+            }
+
+            // Evaluasi Personal Distress (PD) - Emosional Negatif (Reaksi Diri)
+            if (pd >= 2.8) {
+                improvements.push("Mudah merasa cemas, panik, atau 'burnout' ketika berada di tengah situasi darurat atau konflik emosional orang lain.");
+                recommendations.push("<span class='font-semibold'>Manajemen Stres:</span> Latih teknik pernapasan (mindfulness) untuk menjaga batas emosional Anda agar tidak ikut terseret dalam krisis orang lain.");
+            } else if (pd <= 1.8) {
+                strengths.push("Sangat tenang dan efektif di bawah tekanan; mampu berpikir logis meski berada di situasi darurat.");
+            }
+
+            // Evaluasi Kombinasi Khusus (Kecerdasan Engine)
+            if (ec >= 2.8 && pd >= 2.8) {
+                improvements.push("Risiko tinggi mengalami 'Compassion Fatigue' (kelelahan emosional) karena sangat peduli namun tidak memiliki tameng emosional yang kuat.");
+                recommendations.push("<span class='font-semibold'>Self-Care Boundary:</span> Belajar berkata 'Tidak' atau membatasi waktu mendengarkan keluhan orang lain untuk melindungi energi mental Anda.");
+            }
+            if (pt >= 2.8 && ec <= 2.0) {
+                strengths.push("Ahli strategi komunikasi; tahu cara membaca pikiran orang lain secara presisi untuk tujuan negosiasi.");
+            }
+
+            // Fallback jika array kosong (skor semua di tengah/rata-rata)
+            if(strengths.length === 0) strengths.push("Memiliki keseimbangan empati kognitif dan emosional yang standar.");
+            if(improvements.length === 0) improvements.push("Tingkatkan frekuensi interaksi mendalam dengan orang berlatar belakang berbeda.");
+            if(recommendations.length === 0) recommendations.push("<span class='font-semibold'>Journaling:</span> Tulis refleksi harian tentang emosi yang Anda dan rekan Anda rasakan hari ini.");
+
+            // Render ke DOM
+            document.getElementById('res-strengths').innerHTML = strengths.map(s => `<li>${s}</li>`).join('');
+            document.getElementById('res-improvements').innerHTML = improvements.map(i => `<li>${i}</li>`).join('');
+            document.getElementById('res-recommendations').innerHTML = recommendations.map(r => `<li><i class="fa-solid fa-check text-blue-500 mr-1"></i> ${r}</li>`).join('');
+        }
+
+        // Fitur Download Image menggunakan html2canvas
+        function downloadImage() {
+            const element = document.getElementById('sec-result');
+            
+            // Hapus class animasi sementara
+            element.classList.remove('fade-in');
+            
+            // Sembunyikan tombol download dan admin tools sementara agar tidak ikut tercetak
+            const btn = element.querySelector('button');
+            const adminTools = document.getElementById('admin-result-tools');
+            const saveStatusMsg = document.getElementById('save-status');
+            
+            if(btn) btn.style.display = 'none';
+            if(adminTools) adminTools.style.display = 'none';
+            if(saveStatusMsg) saveStatusMsg.style.display = 'none';
+
+            // Tambahkan flag loading
+            document.getElementById('save-status').style.display = 'block';
+            document.getElementById('save-status').innerHTML = '<i class="fa-solid fa-spinner fa-spin text-blue-500"></i> Menyiapkan Gambar Kualitas Tinggi...';
+
+            html2canvas(element, {
+                scale: 3,
+                useCORS: true,
+                backgroundColor: "#f8fafc",
+                onclone: function (clonedDoc) {
+                    const clonedEl = clonedDoc.getElementById('sec-result');
+                    if(clonedEl) {
+                        clonedEl.style.opacity = '1';
+                        clonedEl.style.transform = 'none';
+                        clonedEl.classList.remove('fade-in');
+                    }
+                }
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Empathy_Report_${userProfile.name ? userProfile.name.replace(/\s+/g, '_') : 'User'}.png`;
+                link.href = canvas.toDataURL('image/png'); 
+                link.click();
+
+                // Kembalikan tombol dan status
+                if(btn) btn.style.display = 'flex';
+                if(adminTools && currentUser.role === 'admin') adminTools.style.display = 'flex';
+                
+                if (currentUser.role === 'admin') {
+                    document.getElementById('save-status').innerHTML = '<i class="fa-solid fa-check text-emerald-500"></i> Unduhan gambar berhasil.';
+                } else {
+                    document.getElementById('save-status').innerHTML = '<i class="fa-solid fa-check text-emerald-500"></i> Unduhan berhasil, Anda akan dialihkan...';
+                    setTimeout(() => {
+                        logout();
+                    }, 1500);
+                }
+            }).catch(err => {
+                if(btn) btn.style.display = 'flex';
+                if(adminTools && currentUser.role === 'admin') adminTools.style.display = 'flex';
+                document.getElementById('save-status').innerHTML = '<i class="fa-solid fa-xmark text-red-500"></i> Gagal membuat gambar.';
+            });
+        }
+    </script>
+</body>
+</html>
